@@ -2,6 +2,7 @@
 name: screen
 description: "Finds which US stocks match one of Owl Mastery's daily screens and counts the market against its gamma levels: stocks in negative or positive gamma (below or above their HVL), near the HVL, below put support (put wall), above call resistance (call wall), RSI oversold or overbought, or near the 52-week high, in the whole market or one sector, and how many stocks or what share closed above or below their HVL, call resistance and put support. Use it whenever the user asks which stocks, names or tickers meet one of those conditions, or how much of the market or a sector is in negative gamma, even if they do not say Owl Mastery. Do not use it for one named ticker's levels (use the levels skill), for price moves, breadth or watchlists (use the market skill), or to recommend a trade."
 allowed-tools: mcp__plugin_owlmastery_owlmastery__screen_tickers mcp__plugin_owlmastery_owlmastery__get_market_gamma mcp__plugin_owlmastery_owlmastery__get_ticker_levels
+argument-hint: "[screen] [sector]"
 ---
 
 # Screen the market against its levels
@@ -50,13 +51,9 @@ Give the `url` from the answer, the page on owlmastery.com that shows it.
 
 A screen describes options positioning and price signals after the close. It is educational information, not investment advice, and not a list of stocks to buy or sell. If the user asks what to trade, say the screens show levels and not forecasts, and do not recommend a trade.
 
-## When the Owl Mastery tools are missing
+## When the tools are missing or a call fails
 
-If no Owl Mastery tool is available in this session, the connection is not set up. Do not search for other connectors or call other tools, and do not estimate any number. In two or three sentences, tell the user to connect Owl Mastery, give the steps for their client from `references/connect.md`, and link https://owlmastery.com/connect. After connecting, the user asks the question again in a new conversation.
-
-## When a call fails
-
-- **401 or unauthorized.** The connection was disconnected, or is not signed in. Tell the user to connect Owl Mastery again from their client, with the steps in `references/connect.md`, or https://owlmastery.com/connect.
-- **An unknown-screen or unknown-sector error.** It lists the valid names. Pick one of them.
-- **429 or too many requests.** Wait a second and retry once.
-- **An error that says the call took too long, or that something went wrong.** Retry once. If it fails again, tell the user the server failed and stop.
+- **No Owl Mastery tool in this session.** The connection is not set up. Do not search for other connectors or call other tools, and do not estimate any number. In two or three sentences, tell the user to connect Owl Mastery, give the steps for their client from `references/connect.md`, and link https://owlmastery.com/connect. After connecting, the user asks the question again in a new conversation.
+- **401 or unauthorized.** The user disconnected the app, or never signed in. Give the same steps.
+- **A tool error.** It says what to try next. An unknown-screen or unknown-sector error lists the valid names. Pick one of them.
+- **429, a call that took too long, or an error that says something went wrong.** Wait a second and retry once. If it fails again, tell the user the server failed and stop.
