@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "owlmastery": {
+      "type": "http",
+      "url": "${OWLMASTERY_MCP_URL:-https://owlmastery.com/mcp}",
+      "headers": {
+        "Authorization": "Bearer ${OWLMASTERY_API_KEY}"
+      }
+    }
+  }
+}
