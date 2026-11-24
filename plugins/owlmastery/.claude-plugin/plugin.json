@@ -1,6 +1,6 @@
 {
   "name": "owlmastery",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connects Claude Code to the Owl Mastery MCP server and teaches it to read gamma levels, implied volatility and market data.",
   "author": {
     "name": "Owl Mastery",

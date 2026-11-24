@@ -2,7 +2,7 @@
 
 A Claude Code plugin and marketplace that connect Claude Code to the Owl Mastery MCP server. The server gives Claude read-only access to Owl Mastery's daily gamma levels, implied volatility and market data. The plugin adds two skills that teach Claude how to read that data.
 
-**Status.** The server answers at `https://owlmastery.com/mcp` once Owl Mastery routes it. Until then, test against a local API (see [Test against localhost](#test-against-localhost)).
+**Status.** The server answers at `https://owlmastery.com/mcp` and signs you in with your Owl Mastery account through OAuth. To test against a local API, see [Test against localhost](#test-against-localhost).
 
 ## Install
 
@@ -15,21 +15,18 @@ In Claude Code, add the marketplace and install the plugin:
 
 To install from a local checkout, run `/plugin marketplace add .` from the repository root instead.
 
-## Create and set an API key
+## Sign in
 
-The server accepts a bearer API key from a registered Owl Mastery user. A key starts with `owl_`. You create it while signed in, and it works for 14 days. After that, calls answer 401 and you create a new key.
+You need an Owl Mastery account. After you install the plugin, sign in once:
 
-Set the key in the `OWLMASTERY_API_KEY` environment variable of the shell that starts Claude Code:
+1. Run `/mcp` in Claude Code, select `owlmastery`, and choose **Authenticate**. If you skip this step, the first tool call prompts you instead.
+2. Your browser opens the Owl Mastery sign-in page. Sign in, then select **Allow** on the consent page.
+3. Claude Code stores the tokens and refreshes them itself. Access tokens last 1 hour and refresh tokens 14 days, renewed on each use. A connection unused for 14 days asks you to sign in again.
 
-```bash
-export OWLMASTERY_API_KEY=owl_...
-```
-
-Never write the key into a file in this repository or into a Claude Code config file. Both plugins read the variable by name. After you change the variable, restart Claude Code.
-
+You see and disconnect your connections in Owl Mastery under **Profile**, **Connected apps**.
 ## What the plugin adds
 
-- **MCP server `owlmastery`**, streamable HTTP, with the header `Authorization: Bearer ${OWLMASTERY_API_KEY}`. Claude Code expands the variable when it connects, so the key stays out of the config.
+- **MCP server `owlmastery`**, streamable HTTP at `https://owlmastery.com/mcp`. The server answers 401 until you sign in, and Claude Code then runs the OAuth flow. The plugin holds no credential.
 - **Skill `levels`** (`/owlmastery:levels NVDA`). Reads a ticker's call resistance, put support, HVL, gamma wall, net gamma, 1-day range and implied volatility against its close. Claude also loads it on its own when you ask about those levels.
 - **Skill `market`** (`/owlmastery:market`). Summarizes breadth, indexes, movers, sectors and your watchlists.
 
@@ -37,15 +34,17 @@ The server has seven read-only tools: `search_tickers`, `get_ticker_levels`, `ge
 
 ## Test against localhost
 
-Start the Owl Mastery API on `http://localhost:8080` and create a key against it. Then point the plugin at it:
+Start the Owl Mastery API on `http://localhost:8080` and the web app with `make frontend`, which proxies `/mcp` and `/oauth` on `http://localhost:5173`. Add the local server next to the plugin's, under another name:
 
 ```bash
-export OWLMASTERY_MCP_URL=http://localhost:8080/mcp
-export OWLMASTERY_API_KEY=owl_...
-claude
+claude mcp add --transport http owl-local http://localhost:5173/mcp
 ```
 
-`OWLMASTERY_MCP_URL` is optional. When unset, the plugin uses `https://owlmastery.com/mcp`. Run `/mcp` in Claude Code to see whether `owlmastery` is connected. To validate the manifests, run `claude plugin validate .` and `claude plugin validate plugins/owlmastery`.
+Run `/mcp`, select `owl-local` and choose **Authenticate**. The sign-in goes through the local app, so use a local account. Remove it when you are done:
+
+```bash
+claude mcp remove owl-local
+```
 
 ## Check the plugin
 
@@ -54,7 +53,7 @@ claude plugin validate .
 claude plugin validate plugins/owlmastery
 ```
 
-To see the token cost, install the plugin and run `claude plugin details owlmastery`. The two skills add about 180 tokens to every session. A skill's body loads only when it fires, about 900 tokens for `levels` and 500 for `market`.
+To see the token cost, install the plugin and run `claude plugin details owlmastery`. The two skills add about 430 tokens to every session. A skill's body loads only when it fires: about 1,600 tokens for `levels`, which includes its glossary, and 800 for `market`. These are the command's projected figures.
 
 The suite in `plugins/owlmastery/evals/` checks that each skill fires on the prompts it should and stays out of the ones it should not. It needs no server, because the cases stop at the skill call. It runs a model, so it costs a few cents:
 
@@ -67,16 +66,16 @@ Drop `--runs 1` for three runs per case. Results go to `evals/results/`, which g
 
 ## What the plugin leaves out
 
-- **No `userConfig` key prompt.** Claude Code can ask for the key and keep it in the keychain. The variable stays because the Codex plugin reads the same one, so one setup covers both clients. A required prompt would also block installing the plugin before the user has a key. Revisit it when the server has OAuth.
-- **No commands, agents or hooks.** A skill already runs as `/owlmastery:levels`, so a command adds nothing. The skills only read data, so no agent needs its own context. A hook cannot see a key's age, and Claude Code already reports a failed connection.
+- **No `userConfig` key prompt and no stored credential.** Sign-in is OAuth, so Claude Code holds the tokens and the plugin asks for nothing at install.
+- **No commands, agents or hooks.** A skill already runs as `/owlmastery:levels`, so a command adds nothing. The skills only read data, so no agent needs its own context. Claude Code already reports a failed connection and offers to sign in again.
 - **No MCPB bundle or MCP app widgets.** The server is remote HTTP, so there is nothing local to bundle. The answers are numbers and levels that read well as text.
 
 ## What works where
 
 | Client | Works now | Notes |
 | --- | --- | --- |
-| Claude Code | Yes | Header with an environment variable. |
-| Claude.ai and Claude Desktop connectors | Not yet | Connectors use OAuth, and the server has none yet. Claude.ai may accept a fixed request header as a beta option, which is untested. |
+| Claude Code | Yes | OAuth sign-in in the browser. |
+| Claude.ai and Claude Desktop connectors | Expected, not yet confirmed | Add `https://owlmastery.com/mcp` as a custom connector under **Settings**, **Connectors**. It should work once Owl Mastery allows server-to-server traffic through Cloudflare. Without the plugin, the skills are not installed. A directory listing is pending. |
 | ChatGPT and Codex | See the Codex plugin repository | |
 
 ## Keep the skills in sync
@@ -89,7 +88,7 @@ The skills in `plugins/owlmastery/skills/` also ship in the Codex plugin reposit
 .claude-plugin/marketplace.json     the marketplace, named owlmastery
 plugins/owlmastery/
   .claude-plugin/plugin.json        the plugin manifest
-  .mcp.json                         the MCP server and its header
+  .mcp.json                         the MCP server URL
   skills/levels/                    SKILL.md and references/glossary.md
   skills/market/                    SKILL.md
   evals/                            skill-trigger cases for claude plugin eval
