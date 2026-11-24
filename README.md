@@ -28,11 +28,11 @@ You see and disconnect your connections in Owl Mastery under **Profile**, **Conn
 ## What the plugin adds
 
 - **MCP server `owlmastery`**, streamable HTTP at `https://owlmastery.com/mcp`. The server answers 401 until you sign in, and Claude Code then runs the OAuth flow. The plugin holds no credential.
-- **Skill `levels`** (`/owlmastery:levels NVDA`). Reads a ticker's call resistance, put support, HVL, gamma wall, net gamma, 1-day range and implied volatility against its close, and compares up to 10 tickers in one table. Claude also loads it on its own when you ask about those levels.
+- **Skill `levels`** (`/owlmastery:levels NVDA`). Reads a ticker's call resistance, put support, HVL, gamma wall, net gamma, 1-day range and implied volatility against its close, compares up to 10 tickers in one table, and shows a ticker's gamma or volatility as a chart. Claude also loads it on its own when you ask about those levels.
 - **Skill `market`** (`/owlmastery:market`). Summarizes breadth, indexes, movers, sectors and your watchlists.
 - **Skill `screen`** (`/owlmastery:screen`). Lists the stocks on one of the daily screens, such as negative gamma, below put support or RSI oversold, in the market or one sector, and counts how many stocks closed above or below their levels.
 
-The server has nine read-only tools: `search_tickers`, `get_ticker_levels`, `get_gamma_exposure`, `get_volatility`, `get_market_overview`, `get_sectors`, `list_watchlists`, `screen_tickers` and `get_market_gamma`. The server describes their inputs itself, so the skills name the tools and leave the schemas out. Each skill's `allowed-tools` line lets Claude Code call the tools the skill uses without a prompt. A plugin's MCP tool is named `mcp__plugin_<plugin>_<server>__<tool>`, so `get_ticker_levels` of the `owlmastery` server in the `owlmastery` plugin is `mcp__plugin_owlmastery_owlmastery__get_ticker_levels`.
+The server has eleven read-only tools: `search_tickers`, `get_ticker_levels`, `get_gamma_exposure`, `get_volatility`, `get_market_overview`, `get_sectors`, `list_watchlists`, `screen_tickers`, `get_market_gamma`, `show_gamma_chart` and `show_volatility_chart`. The two `show_` tools return a short summary with the key numbers and a link to the ticker's page, and apps that support MCP Apps draw a chart from it. The server describes their inputs itself, so the skills name the tools and leave the schemas out. Each skill's `allowed-tools` line lets Claude Code call the tools the skill uses without a prompt. A plugin's MCP tool is named `mcp__plugin_<plugin>_<server>__<tool>`, so `get_ticker_levels` of the `owlmastery` server in the `owlmastery` plugin is `mcp__plugin_owlmastery_owlmastery__get_ticker_levels`.
 
 ## Test against localhost
 
@@ -55,7 +55,7 @@ claude plugin validate .
 claude plugin validate plugins/owlmastery
 ```
 
-To see the token cost, install the plugin and run `claude plugin details owlmastery`, or run `claude --plugin-dir plugins/owlmastery plugin details owlmastery` from a checkout. The three skills add about 780 tokens to every session. A skill's body loads only when it fires: about 2,200 tokens for `levels`, which includes its references, 1,000 for `market` and 1,600 for `screen`. These are the command's projected figures.
+To see the token cost, install the plugin and run `claude plugin details owlmastery`, or run `claude --plugin-dir plugins/owlmastery plugin details owlmastery` from a checkout. The three skills add about 830 tokens to every session. A skill's body loads only when it fires: about 2,700 tokens for `levels`, which includes its references, 1,100 for `market` and 1,700 for `screen`. These are the command's projected figures.
 
 The suite in `plugins/owlmastery/evals/` checks that each skill fires on the prompts it should and stays out of the ones it should not. It needs no server, because the cases stop at the skill call. It runs a model, so it costs a few cents:
 
@@ -70,15 +70,15 @@ Drop `--runs 1` for three runs per case. Results go to `evals/results/`, which g
 
 - **No `userConfig` key prompt and no stored credential.** Sign-in is OAuth, so Claude Code holds the tokens and the plugin asks for nothing at install.
 - **No commands, agents or hooks.** A skill already runs as `/owlmastery:levels`, so a command adds nothing. The skills only read data, so no agent needs its own context. Claude Code already reports a failed connection and offers to sign in again.
-- **No MCPB bundle or MCP app widgets.** The server is remote HTTP, so there is nothing local to bundle. The answers are numbers and levels that read well as text.
+- **No MCPB bundle and no widget code.** The server is remote HTTP, so there is nothing local to bundle. The server serves the chart card itself, to apps that support MCP Apps.
 
 ## What works where
 
 | Client | Works now | Notes |
 | --- | --- | --- |
-| Claude Code | Yes | OAuth sign-in in the browser. |
-| Claude.ai and Claude Desktop | Expected, not yet confirmed | Add the plugin under **Customize**, **Plugins**, then select **Connect** on its **Connectors** tab and sign in. In a Team or Enterprise organization, Connect stays greyed out until an owner adds a custom connector with the URL `https://owlmastery.com/mcp` under **Organization settings**, **Connectors**. Needs Owl Mastery to let server-to-server traffic through Cloudflare. A directory listing is pending. |
-| ChatGPT and Codex | See the Codex plugin repository | |
+| Claude Code | Yes | OAuth sign-in in the browser. Shows no chart: `show_gamma_chart` and `show_volatility_chart` answer with the numbers and a link to the ticker's page. |
+| Claude.ai, Claude Desktop and Cowork | Expected, not yet confirmed | Draw the chart card from the two `show_` tools. Add the plugin under **Customize**, **Plugins**, then select **Connect** on its **Connectors** tab and sign in. In a Team or Enterprise organization, Connect stays greyed out until an owner adds a custom connector with the URL `https://owlmastery.com/mcp` under **Organization settings**, **Connectors**. Needs Owl Mastery to let server-to-server traffic through Cloudflare. A directory listing is pending. |
+| ChatGPT and Codex | See the Codex plugin repository | ChatGPT draws the chart card. Codex shows the numbers and the link. |
 
 ## Keep the skills in sync
 
